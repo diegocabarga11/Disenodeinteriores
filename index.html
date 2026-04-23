@@ -6,7 +6,18 @@
 <title>StoneCraft — Visualizador de Superficies</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- =========================================================
+     ESTILOS EXTERNOS
+     Reemplaza el bloque <style> inline por este link
+     cuando tengas tu style.css listo en el mismo directorio.
+     ========================================================= -->
+<link rel="stylesheet" href="style.css">
+
 <style>
+  /* =========================================================
+     ESTILOS BASE — se mantienen intactos del diseño original
+     ========================================================= */
   :root {
     --cream: #F7F4EF;
     --warm-white: #FDFCFA;
@@ -673,7 +684,140 @@
 
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* RESPONSIVE */
+  /* =========================================================
+     NUEVO: SECCIÓN DE PROPUESTA IA
+     Añadido debajo del área visual principal.
+     Clases prefijadas con "ai-" para no colisionar con
+     ningún estilo existente.
+     ========================================================= */
+
+  /* Botón "Generar propuesta con IA" */
+  .ai-generate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, var(--stone-mid), var(--stone-dark));
+    color: var(--gold-light);
+    border: 1.5px solid var(--gold);
+    padding: 13px 28px;
+    border-radius: 8px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ai-generate-btn:hover {
+    background: linear-gradient(135deg, var(--stone-dark), #0e0c0a);
+    border-color: var(--gold-light);
+    box-shadow: 0 4px 24px rgba(196,163,90,0.25);
+    transform: translateY(-1px);
+  }
+
+  .ai-generate-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Wrapper de la sección completa de IA */
+  .ai-section {
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Título de sección */
+  .ai-section-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--stone-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Bloque de resultado */
+  .ai-result-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ai-result-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--stone-dark);
+    letter-spacing: 0.02em;
+  }
+
+  /* Mensaje de carga — oculto por defecto */
+  #loadingMessage {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--stone-light);
+    font-style: italic;
+  }
+
+  /* Spinner animado junto al mensaje de carga */
+  .ai-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: ai-spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes ai-spin { to { transform: rotate(360deg); } }
+
+  /* Contenedor donde aparece la imagen/resultado generado */
+  #resultContainer {
+    min-height: 200px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--warm-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: var(--transition);
+    position: relative;
+  }
+
+  /* Placeholder visible antes de que haya resultado */
+  #resultContainer:empty::after {
+    content: 'El resultado aparecerá aquí';
+    font-size: 13px;
+    color: var(--stone-light);
+    font-style: italic;
+  }
+
+  /* Imagen generada dentro del contenedor */
+  #resultContainer img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: calc(var(--radius) - 2px);
+  }
+
+  /* Estado activo del contenedor cuando tiene contenido */
+  #resultContainer.has-result {
+    border-style: solid;
+    border-color: var(--gold);
+    min-height: unset;
+  }
+
+  /* RESPONSIVE — nuevas secciones */
   @media (max-width: 768px) {
     .app-body { grid-template-columns: 1fr; }
     .materials-panel { border-left: none; border-top: 1px solid var(--border); }
@@ -684,6 +828,7 @@
     footer { flex-direction: column; text-align: center; }
     .cta-sub { flex-direction: column; }
     .modal { padding: 24px 20px; }
+    /* El botón de IA ocupa ancho completo en móvil (ya es 100%) */
   }
 </style>
 </head>
@@ -734,14 +879,14 @@
 </div>
 
 <!-- =========================================================
-     MAIN BODY
+     MAIN BODY — sin cambios en estructura
      ========================================================= -->
 <div class="app-body">
 
   <!-- LEFT: CANVAS -->
   <div class="canvas-panel">
 
-    <!-- Upload Zone -->
+    <!-- Upload Zone — sin cambios -->
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
       <div class="upload-icon">📷</div>
       <h3>Sube una foto de tu espacio</h3>
@@ -753,7 +898,7 @@
       <input type="file" id="fileInput" accept="image/*" onchange="loadImage(event)">
     </div>
 
-    <!-- Canvas Container -->
+    <!-- Canvas Container — sin cambios -->
     <div class="canvas-container" id="canvasContainer">
 
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -778,9 +923,58 @@
       </div>
 
     </div>
-  </div>
+    <!-- /canvas-container -->
 
-  <!-- RIGHT: MATERIALS -->
+    <!-- =====================================================
+         NUEVO: SECCIÓN DE PROPUESTA CON IA
+         Insertada debajo del canvas, dentro del canvas-panel,
+         para heredar el mismo padding y alineación.
+         ===================================================== -->
+    <div class="ai-section">
+
+      <span class="ai-section-label">✦ Propuesta visual con inteligencia artificial</span>
+
+      <!-- Botón principal — llama a generar() definida en script.js -->
+      <button
+        class="ai-generate-btn"
+        id="aiGenerateBtn"
+        onclick="generar()"
+        aria-label="Generar propuesta con IA"
+      >
+        <span>🤖</span>
+        Generar propuesta con IA
+      </button>
+
+      <!-- Bloque de resultado — siempre presente en el DOM,
+           script.js lo muestra/oculta según corresponda -->
+      <div class="ai-result-section" id="aiResultSection">
+
+        <h2 class="ai-result-title">Resultado generado</h2>
+
+        <!-- Mensaje de carga: oculto por defecto (display:none en CSS).
+             script.js lo muestra con: loadingMessage.style.display = 'flex'
+             y lo oculta con:          loadingMessage.style.display = 'none' -->
+        <div id="loadingMessage" role="status" aria-live="polite">
+          <span class="ai-spinner" aria-hidden="true"></span>
+          Generando propuesta...
+        </div>
+
+        <!-- Contenedor de la imagen generada.
+             script.js inserta aquí: resultContainer.innerHTML = '<img src="..." alt="Propuesta IA">'
+             o cualquier otro contenido HTML del resultado.
+             Añade la clase "has-result" para activar el estilo de borde sólido. -->
+        <div id="resultContainer" aria-label="Resultado generado por IA"></div>
+
+      </div>
+      <!-- /ai-result-section -->
+
+    </div>
+    <!-- /ai-section -->
+
+  </div>
+  <!-- /canvas-panel -->
+
+  <!-- RIGHT: MATERIALS — sin cambios -->
   <div class="materials-panel">
 
     <div class="panel-header">
@@ -825,10 +1019,13 @@
     </div>
 
   </div>
+  <!-- /materials-panel -->
+
 </div>
+<!-- /app-body -->
 
 <!-- =========================================================
-     FOOTER
+     FOOTER — sin cambios
      ========================================================= -->
 <footer>
   <span>© 2025 StoneCraft — Superficies de lujo para tu hogar</span>
@@ -840,7 +1037,7 @@
 </footer>
 
 <!-- =========================================================
-     MODAL — COTIZACIÓN
+     MODAL — COTIZACIÓN — sin cambios
      ========================================================= -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
   <div class="modal">
@@ -892,496 +1089,34 @@
   </div>
 </div>
 
-<!-- TOAST -->
+<!-- TOAST — sin cambios -->
 <div class="toast" id="toast"></div>
 
 <!-- =========================================================
-     JAVASCRIPT
+     SCRIPTS EXTERNOS
+     script.js debe exponer globalmente:
+       - generar()          → llamada por el botón de IA
+       - loadImage(event)   → carga de imagen
+       - openModal()        → abre el modal de cotización
+       - closeModal()       → cierra el modal
+       - closeModalOutside(event)
+       - submitQuote()
+       - filterCategory(cat, btn)
+       - selectMaterial(id)
+       - setTool(t)
+       - clearSelection()
+       - setView(view)
+       - updateOpacity(val)
+       - shareDesign()
+       - downloadPreview()
+       - renderMaterials()  → llamada en init
+     IDs que script.js necesita del DOM:
+       #loadingMessage      → mostrar/ocultar con display flex/none
+       #resultContainer     → insertar imagen o HTML del resultado;
+                              añadir clase "has-result" cuando haya contenido
+       #aiGenerateBtn       → deshabilitar durante la generación (disabled)
      ========================================================= -->
-<script>
-/* =========================================================
-   DATASET DE MATERIALES
-   NOTA: Reemplaza los colores por URLs de fotos reales
-   de tus materiales en un CDN (Cloudinary, S3, etc.)
-   ========================================================= */
-const MATERIALS = [
-  {
-    id:1,  name:'Mármol Carrara Blanco',  category:'Mármol',
-    desc:'Elegancia clásica italiana. Venas grises sutiles sobre fondo blanco perla.',
-    price:'$$$',
-    color:'linear-gradient(135deg,#f0ece6 0%,#e8e4de 30%,#d8d4ce 60%,#ece8e2 100%)',
-    fill:'#e8e4de'
-  },
-  {
-    id:2,  name:'Mármol Negro Marquina',  category:'Mármol',
-    desc:'Dramatismo absoluto. Negro profundo con venas doradas naturales.',
-    price:'$$$',
-    color:'linear-gradient(135deg,#1a1a1a 0%,#2a2a2a 40%,#1e1e1e 70%,#252525 100%)',
-    fill:'#1e1e1e'
-  },
-  {
-    id:3,  name:'Granito Azul Bahía',  category:'Granito',
-    desc:'Tonos azul-gris con destellos plateados únicos en cada losa.',
-    price:'$$',
-    color:'linear-gradient(135deg,#3a4a5a 0%,#4a5a6a 30%,#2a3a4a 60%,#3a4a5a 100%)',
-    fill:'#3a4a5a'
-  },
-  {
-    id:4,  name:'Granito Absoluto Negro',  category:'Granito',
-    desc:'Superficie oscura uniforme, ideal para cocinas modernas minimalistas.',
-    price:'$$',
-    color:'linear-gradient(135deg,#1a1a1a 0%,#252525 50%,#1a1a1a 100%)',
-    fill:'#1a1a1a'
-  },
-  {
-    id:5,  name:'Cuarzo Blanco Nieve',  category:'Cuarzo',
-    desc:'No poroso, resistente a manchas. Blanco puro con acabado sedoso.',
-    price:'$$',
-    color:'linear-gradient(135deg,#f8f7f5 0%,#f0eeea 50%,#f8f7f5 100%)',
-    fill:'#f2f0ec'
-  },
-  {
-    id:6,  name:'Cuarzo Greige Cemento',  category:'Cuarzo',
-    desc:'Tono gris-beige neutro. Combina con cualquier paleta de diseño interior.',
-    price:'$$',
-    color:'linear-gradient(135deg,#c8bfb2 0%,#b8afa2 40%,#c2b9ac 100%)',
-    fill:'#c2b9ac'
-  },
-  {
-    id:7,  name:'Porcelana Ultra Slim',  category:'Porcelana',
-    desc:'Solo 12mm de grosor. Resistente a rayones, calor y UV.',
-    price:'$$$',
-    color:'linear-gradient(135deg,#e8e4e0 0%,#ddd9d5 50%,#e4e0dc 100%)',
-    fill:'#e2deda'
-  },
-  {
-    id:8,  name:'Porcelana Cemento Industrial',  category:'Porcelana',
-    desc:'Estética urbana con acabado mate cemento, muy popular en diseño contemporáneo.',
-    price:'$$$',
-    color:'linear-gradient(135deg,#888884 0%,#7a7a76 40%,#848480 100%)',
-    fill:'#828280'
-  },
-  {
-    id:9,  name:'Madera Nogal Natural',  category:'Madera',
-    desc:'Calidez orgánica auténtica. Madera sólida tratada para uso en cocina.',
-    price:'$$$',
-    color:'linear-gradient(135deg,#6b4423 0%,#7a5030 30%,#5e3a1e 70%,#6b4423 100%)',
-    fill:'#7a5030'
-  },
-  {
-    id:10, name:'Madera Roble Blanqueado', category:'Madera',
-    desc:'Roble de grano abierto con tratamiento blanqueado. Estilo escandinavo moderno.',
-    price:'$$',
-    color:'linear-gradient(135deg,#d4c4a8 0%,#c8b898 30%,#d0c0a4 70%,#c4b494 100%)',
-    fill:'#d0c0a4'
-  },
-  {
-    id:11, name:'Mármol Rosa Portugués', category:'Mármol',
-    desc:'Rosa blush suave con venas finas. Perfecto para vanities y baños de lujo.',
-    price:'$$$',
-    color:'linear-gradient(135deg,#f0d8d0 0%,#e4ccc4 40%,#ecd4cc 100%)',
-    fill:'#ecd4cc'
-  },
-  {
-    id:12, name:'Cuarzo Calacatta Gold', category:'Cuarzo',
-    desc:'Imitación Calacatta con venas doradas. Lujo accesible y sin mantenimiento.',
-    price:'$$$',
-    color:'linear-gradient(135deg,#f4f0e8 0%,#ece8de 40%,#f0ece4 100%)',
-    fill:'#f0ece4'
-  }
-];
-
-/* =========================================================
-   ESTADO GLOBAL
-   ========================================================= */
-var state = {
-  imageLoaded:     false,
-  originalImage:   null,
-  points:          [],
-  selectionClosed: false,
-  selectedMaterial:null,
-  overlayOpacity:  0.75,
-  currentView:     'preview'
-};
-
-/* =========================================================
-   RENDER MATERIALES
-   ========================================================= */
-function renderMaterials(filter) {
-  filter = filter || 'Todos';
-  var grid     = document.getElementById('materialGrid');
-  var filtered = filter === 'Todos' ? MATERIALS : MATERIALS.filter(function(m){ return m.category === filter; });
-
-  grid.innerHTML = filtered.map(function(m){
-    return '<div class="material-card" id="mat-'+m.id+'" onclick="selectMaterial('+m.id+')">' +
-      '<div class="material-swatch" style="background:'+m.color+';"></div>' +
-      '<div class="material-info">' +
-        '<div class="material-name">'+m.name+'</div>' +
-        '<div class="material-meta"><span>'+m.category+'</span><span class="material-price">'+m.price+'</span></div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-
-  /* Restaurar selección activa si corresponde */
-  if(state.selectedMaterial){
-    var card = document.getElementById('mat-'+state.selectedMaterial.id);
-    if(card) card.classList.add('selected');
-  }
-}
-
-function filterCategory(cat, btn){
-  document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  renderMaterials(cat);
-}
-
-/* =========================================================
-   SELECCIÓN DE MATERIAL
-   ========================================================= */
-function selectMaterial(id){
-  var mat = MATERIALS.find(function(m){ return m.id === id; });
-  if(!mat) return;
-
-  state.selectedMaterial = mat;
-  document.querySelectorAll('.material-card').forEach(function(c){ c.classList.remove('selected'); });
-  var card = document.getElementById('mat-'+id);
-  if(card) card.classList.add('selected');
-
-  document.getElementById('detailName').textContent = mat.name;
-  document.getElementById('detailDesc').textContent  = mat.desc;
-  document.getElementById('selectedDetail').classList.add('visible');
-  document.getElementById('opacityControl').style.display = 'block';
-
-  if(state.imageLoaded){
-    redrawCanvas();
-    if(!state.selectionClosed){
-      showToast('💡 Traza el área de tu superficie primero');
-    } else {
-      showToast('✓ Material aplicado: ' + mat.name);
-      updateStep(3);
-    }
-  } else {
-    showToast('📷 Primero sube una foto de tu espacio');
-  }
-}
-
-/* =========================================================
-   CARGA DE IMAGEN
-   ========================================================= */
-function loadImage(event){
-  var file = event.target.files[0];
-  if(!file) return;
-
-  var reader = new FileReader();
-  reader.onload = function(e){
-    var img = new Image();
-    img.onload = function(){
-      state.originalImage   = img;
-      state.imageLoaded     = true;
-      state.points          = [];
-      state.selectionClosed = false;
-
-      document.getElementById('uploadZone').style.display    = 'none';
-      document.getElementById('canvasContainer').classList.add('visible');
-
-      setupCanvas(img);
-      updateStep(2);
-      showToast('✓ Foto cargada — Traza el área de tu superficie');
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-/* =========================================================
-   SETUP CANVAS
-   ========================================================= */
-function setupCanvas(img){
-  var canvas  = document.getElementById('mainCanvas');
-  var wrapper = document.getElementById('canvasWrapper');
-  var maxW    = wrapper.parentElement.offsetWidth - 60;
-  var maxH    = 520;
-
-  var w = img.naturalWidth;
-  var h = img.naturalHeight;
-
-  if(w > maxW){ h = h * maxW / w; w = maxW; }
-  if(h > maxH){ w = w * maxH / h; h = maxH; }
-
-  canvas.width  = Math.round(w);
-  canvas.height = Math.round(h);
-
-  redrawCanvas();
-
-  canvas.onclick     = handleCanvasClick;
-  canvas.ondblclick  = handleDoubleClick;
-}
-
-/* =========================================================
-   DIBUJO EN CANVAS
-   ========================================================= */
-function redrawCanvas(){
-  var canvas = document.getElementById('mainCanvas');
-  var ctx    = canvas.getContext('2d');
-  var img    = state.originalImage;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  if(state.points.length === 0) return;
-
-  /* Overlay de material */
-  if(state.selectionClosed && state.selectedMaterial && state.currentView === 'preview'){
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(state.points[0].x, state.points[0].y);
-    for(var i=1; i<state.points.length; i++) ctx.lineTo(state.points[i].x, state.points[i].y);
-    ctx.closePath();
-    ctx.clip();
-
-    ctx.globalAlpha = state.overlayOpacity;
-    ctx.fillStyle   = state.selectedMaterial.fill;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  /* Contorno del polígono */
-  if(state.points.length > 1){
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(state.points[0].x, state.points[0].y);
-    for(var j=1; j<state.points.length; j++) ctx.lineTo(state.points[j].x, state.points[j].y);
-    if(state.selectionClosed) ctx.closePath();
-
-    ctx.strokeStyle = 'rgba(196,163,90,0.9)';
-    ctx.lineWidth   = 2;
-    ctx.setLineDash(state.selectionClosed ? [] : [6,4]);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  /* Puntos del polígono (sólo mientras se dibuja) */
-  if(!state.selectionClosed){
-    for(var k=0; k<state.points.length; k++){
-      var p = state.points[k];
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
-      ctx.fillStyle   = k === 0 ? '#C4A35A' : 'white';
-      ctx.fill();
-      ctx.strokeStyle = '#C4A35A';
-      ctx.lineWidth   = 2;
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-}
-
-/* =========================================================
-   EVENTOS DE CANVAS
-   ========================================================= */
-function handleCanvasClick(e){
-  if(state.selectionClosed) return;
-
-  var rect  = e.target.getBoundingClientRect();
-  var scaleX = e.target.width  / rect.width;
-  var scaleY = e.target.height / rect.height;
-  var x = (e.clientX - rect.left)  * scaleX;
-  var y = (e.clientY - rect.top)   * scaleY;
-
-  /* Cerrar si clic cerca del primer punto */
-  if(state.points.length > 2){
-    var first = state.points[0];
-    var dist  = Math.sqrt(Math.pow(x-first.x,2) + Math.pow(y-first.y,2));
-    if(dist < 20){ closePolygon(); return; }
-  }
-
-  state.points.push({x:x, y:y});
-  redrawCanvas();
-
-  if(state.points.length === 1){
-    document.getElementById('canvasHint').textContent = '💡 Continúa trazando. Doble clic o haz clic en el punto inicial para cerrar.';
-  }
-}
-
-function handleDoubleClick(e){
-  if(state.points.length > 2 && !state.selectionClosed) closePolygon();
-}
-
-function closePolygon(){
-  state.selectionClosed = true;
-  redrawCanvas();
-  document.getElementById('canvasHint').textContent = '✓ Área seleccionada — Elige un material en el panel derecho';
-  if(state.selectedMaterial){ redrawCanvas(); updateStep(3); }
-  showToast('✓ Área cerrada — Ahora elige un material');
-}
-
-function clearSelection(){
-  state.points          = [];
-  state.selectionClosed = false;
-  if(state.imageLoaded){
-    redrawCanvas();
-    document.getElementById('canvasHint').textContent = '💡 Haz clic en los vértices de tu superficie para trazar el área. Doble clic para cerrar.';
-    showToast('Selección limpiada');
-  }
-}
-
-function setTool(t){
-  document.getElementById('drawTool').classList.toggle('active', t === 'draw');
-}
-
-/* =========================================================
-   TOGGLE ORIGINAL / PREVIEW
-   ========================================================= */
-function setView(view){
-  state.currentView = view;
-  document.querySelectorAll('.compare-tab').forEach(function(btn, i){
-    btn.classList.toggle('active', (i===0 && view==='preview') || (i===1 && view==='original'));
-  });
-  if(state.imageLoaded) redrawCanvas();
-}
-
-/* =========================================================
-   SLIDER DE OPACIDAD
-   ========================================================= */
-function updateOpacity(val){
-  state.overlayOpacity = val / 100;
-  document.getElementById('opacityVal').textContent = val + '%';
-  if(state.imageLoaded) redrawCanvas();
-}
-
-/* =========================================================
-   PASOS
-   ========================================================= */
-function updateStep(activeStep){
-  for(var i=1; i<=4; i++){
-    var el = document.getElementById('step'+i);
-    el.classList.remove('active','done');
-    if(i < activeStep)       el.classList.add('done');
-    else if(i === activeStep) el.classList.add('active');
-  }
-}
-
-/* =========================================================
-   COMPARTIR / DESCARGAR
-   ========================================================= */
-function shareDesign(){
-  showToast('📤 Función de compartir disponible próximamente');
-}
-
-function downloadPreview(){
-  if(!state.imageLoaded){ showToast('📷 Primero carga una foto'); return; }
-  var canvas = document.getElementById('mainCanvas');
-  var link   = document.createElement('a');
-  link.download = 'stonecraft-preview.png';
-  link.href     = canvas.toDataURL('image/png');
-  link.click();
-  showToast('⬇️ Vista previa descargada');
-}
-
-/* =========================================================
-   MODAL
-   ========================================================= */
-function openModal(){
-  document.getElementById('modalOverlay').classList.add('visible');
-  document.getElementById('formState').style.display    = 'block';
-  document.getElementById('successState').style.display = 'none';
-  updateStep(4);
-  if(state.selectedMaterial){
-    var notes = document.getElementById('fNotes');
-    if(!notes.value) notes.value = 'Material de interés: ' + state.selectedMaterial.name;
-  }
-}
-
-function closeModal(){
-  document.getElementById('modalOverlay').classList.remove('visible');
-}
-
-function closeModalOutside(e){
-  if(e.target === document.getElementById('modalOverlay')) closeModal();
-}
-
-function submitQuote(){
-  var name  = document.getElementById('fName').value.trim();
-  var phone = document.getElementById('fPhone').value.trim();
-
-  if(!name || !phone){
-    showToast('⚠️ Ingresa tu nombre y teléfono');
-    return;
-  }
-
-  /*
-    =========================================================
-    INTEGRACIÓN GHL — WEBHOOK
-    Descomenta y reemplaza la URL con tu webhook de GHL:
-
-    fetch('https://services.leadconnectorhq.com/hooks/TU-WEBHOOK-ID', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre:    name,
-        telefono:  phone,
-        email:     document.getElementById('fEmail').value,
-        material:  state.selectedMaterial ? state.selectedMaterial.name : 'No seleccionado',
-        proyecto:  document.getElementById('fProject').value,
-        notas:     document.getElementById('fNotes').value
-      })
-    });
-    =========================================================
-  */
-
-  document.getElementById('formState').style.display    = 'none';
-  document.getElementById('successState').style.display = 'block';
-  showToast('✅ ¡Solicitud enviada con éxito!');
-}
-
-/* =========================================================
-   TOAST
-   ========================================================= */
-var toastTimer = null;
-function showToast(msg){
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  if(toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 3000);
-}
-
-/* =========================================================
-   DRAG & DROP
-   ========================================================= */
-var uploadZone = document.getElementById('uploadZone');
-
-uploadZone.addEventListener('dragover', function(e){
-  e.preventDefault();
-  uploadZone.style.borderColor = 'var(--gold-dark)';
-  uploadZone.style.background  = 'rgba(196,163,90,0.06)';
-});
-
-uploadZone.addEventListener('dragleave', function(){
-  uploadZone.style.borderColor = 'var(--gold)';
-  uploadZone.style.background  = 'var(--warm-white)';
-});
-
-uploadZone.addEventListener('drop', function(e){
-  e.preventDefault();
-  uploadZone.style.borderColor = 'var(--gold)';
-  var file = e.dataTransfer.files[0];
-  if(file && file.type.startsWith('image/')){
-    var input = document.getElementById('fileInput');
-    var dt    = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
-    loadImage({ target: input });
-  }
-});
-
-/* =========================================================
-   INIT
-   ========================================================= */
-renderMaterials();
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>
