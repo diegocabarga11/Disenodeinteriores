@@ -21,9 +21,24 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data?.error?.message || "Error from OpenAI",
+        raw: data
+      });
+    }
+
+    const b64 = data?.data?.[0]?.b64_json;
+
+    if (!b64) {
+      return res.status(500).json({
+        error: "OpenAI did not return image data",
+        raw: data
+      });
+    }
+
     return res.status(200).json({
-      image: data.data?.[0]?.url || null,
-      raw: data
+      image: `data:image/png;base64,${b64}`
     });
 
   } catch (error) {
