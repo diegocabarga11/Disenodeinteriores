@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StoneCraft — Visualizador de Superficies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F7F4EF;
+    --warm-white: #FDFCFA;
+    --stone-dark: #1C1915;
+    --stone-mid: #3D3830;
+    --stone-light: #8A8278;
+    --gold: #C4A35A;
+    --gold-light: #E8D5A3;
+    --gold-dark: #9B7B3A;
+    --accent-green: #4A5E4F;
+    --border: rgba(196,163,90,0.25);
+    --shadow: 0 8px 40px rgba(28,25,21,0.12);
+    --radius: 12px;
+    --transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--stone-dark);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--stone-dark);
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(196,163,90,0.3);
+  }
+
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gold-light);
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-gem {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+    flex-shrink: 0;
+  }
+
+  .header-cta {
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    color: var(--stone-dark);
+    border: none;
+    padding: 9px 22px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: var(--transition);
+  }
+
+  .header-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(196,163,90,0.4); }
+
+  /* HERO STRIP */
+  .hero-strip {
+    background: var(--stone-mid);
+    padding: 18px 32px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-strip h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(22px, 3vw, 36px);
+    font-weight: 300;
+    color: var(--gold-light);
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+  }
+
+  .hero-strip p {
+    color: var(--stone-light);
+    font-size: 14px;
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  /* STEPS BAR */
+  .steps-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    padding: 0 32px;
+    background: var(--warm-white);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .steps-bar::-webkit-scrollbar { display: none; }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--stone-light);
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+
+  .step.active { color: var(--gold-dark); }
+  .step.done   { color: var(--accent-green); }
+
+  .step-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .step.active .step-num { background: var(--gold); border-color: var(--gold); color: var(--stone-dark); }
+  .step.done   .step-num { background: var(--accent-green); border-color: var(--accent-green); color: white; }
+  .step-arrow { color: var(--border); margin: 0 -8px; font-size: 16px; }
+
+  /* MAIN LAYOUT */
+  .app-body {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0;
+    min-height: calc(100vh - 160px);
+  }
+
+  /* CANVAS PANEL */
+  .canvas-panel {
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .upload-zone {
+    border: 2px dashed var(--gold);
+    border-radius: var(--radius);
+    background: var(--warm-white);
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-zone:hover { background: rgba(196,163,90,0.04); border-color: var(--gold-dark); }
+
+  .upload-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: rgba(196,163,90,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  .upload-zone h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--stone-mid);
+  }
+
+  .upload-zone p { font-size: 13px; color: var(--stone-light); }
+
+  .upload-btn {
+    background: var(--stone-dark);
+    color: var(--gold-light);
+    border: none;
+    padding: 10px 28px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition);
+    letter-spacing: 0.04em;
+  }
+
+  .upload-btn:hover { background: var(--stone-mid); transform: translateY(-1px); }
+  #fileInput { display: none; }
+
+  .canvas-container { display: none; flex-direction: column; gap: 16px; }
+  .canvas-container.visible { display: flex; }
+
+  .canvas-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .tool-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--stone-light);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--warm-white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--stone-mid);
+  }
+
+  .tool-btn.active,
+  .tool-btn:hover { border-color: var(--gold); background: rgba(196,163,90,0.08); color: var(--gold-dark); }
+  .tool-btn.danger { border-color: rgba(180,60,60,0.3); color: #b43c3c; }
+  .tool-btn.danger:hover { border-color: #b43c3c; background: rgba(180,60,60,0.06); }
+
+  .canvas-wrapper {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    background: #111;
+    cursor: crosshair;
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  #mainCanvas { display: block; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+
+  .canvas-hint {
+    background: rgba(28,25,21,0.85);
+    color: var(--gold-light);
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-align: center;
+    backdrop-filter: blur(8px);
+  }
+
+  .compare-tabs { display: flex; gap: 8px; align-items: center; }
+
+  .compare-tab {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--stone-light);
+    transition: var(--transition);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .compare-tab.active { background: var(--stone-dark); color: var(--gold-light); border-color: var(--stone-dark); }
+
+  /* MATERIALS PANEL */
+  .materials-panel {
+    background: var(--warm-white);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--stone-dark);
+  }
+
+  .panel-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--gold-light);
+    letter-spacing: 0.04em;
+  }
+
+  .panel-header p { font-size: 12px; color: var(--stone-light); margin-top: 3px; }
+
+  .material-categories {
+    display: flex;
+    gap: 6px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .material-categories::-webkit-scrollbar { display: none; }
+
+  .cat-btn {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+    color: var(--stone-mid);
+    letter-spacing: 0.03em;
+  }
+
+  .cat-btn.active { background: var(--gold); border-color: var(--gold); color: var(--stone-dark); }
+
+  .material-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .material-card {
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: var(--transition);
+    background: var(--cream);
+    box-shadow: 0 2px 8px rgba(28,25,21,0.08);
+  }
+
+  .material-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(28,25,21,0.15); }
+  .material-card.selected { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196,163,90,0.2); }
+
+  .material-swatch {
+    width: 100%;
+    height: 80px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+  }
+
+  .material-swatch::after {
+    content: '✓';
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 22px; height: 22px;
+    background: var(--gold);
+    color: var(--stone-dark);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0;
+    transition: var(--transition);
+  }
+
+  .material-card.selected .material-swatch::after { opacity: 1; }
+
+  .material-info { padding: 8px 10px; }
+  .material-name { font-size: 12px; font-weight: 500; color: var(--stone-dark); line-height: 1.3; }
+
+  .material-meta {
+    font-size: 10px;
+    color: var(--stone-light);
+    margin-top: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .material-price { font-size: 11px; color: var(--gold-dark); font-weight: 500; }
+
+  .selected-material-detail {
+    margin: 0 16px 12px;
+    padding: 12px 14px;
+    background: rgba(196,163,90,0.08);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: none;
+  }
+
+  .selected-material-detail.visible { display: block; }
+
+  .smd-title { font-size: 11px; font-weight: 500; color: var(--stone-light); text-transform: uppercase; letter-spacing: 0.06em; }
+  .smd-name  { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--stone-dark); font-weight: 400; margin-top: 2px; }
+  .smd-desc  { font-size: 12px; color: var(--stone-light); margin-top: 4px; line-height: 1.5; }
+
+  .opacity-control { padding: 0 16px 12px; }
+
+  .opacity-control label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--stone-light);
+    margin-bottom: 6px;
+  }
+
+  .opacity-control input[type="range"] { width: 100%; accent-color: var(--gold); height: 4px; }
+
+  /* CTA */
+  .cta-block {
+    padding: 16px;
+    background: var(--stone-dark);
+    border-top: 1px solid rgba(196,163,90,0.2);
+  }
+
+  .cta-block p {
+    font-size: 12px;
+    color: var(--stone-light);
+    text-align: center;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .cta-main {
+    width: 100%;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    color: var(--stone-dark);
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .cta-main:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(196,163,90,0.4); }
+
+  .cta-sub { display: flex; gap: 8px; margin-top: 8px; }
+
+  .cta-sub-btn {
+    flex: 1;
+    padding: 9px;
+    border: 1.5px solid rgba(196,163,90,0.3);
+    background: transparent;
+    color: var(--gold-light);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .cta-sub-btn:hover { background: rgba(196,163,90,0.1); border-color: var(--gold); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(28,25,21,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+  }
+
+  .modal-overlay.visible { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--warm-white);
+    border-radius: 16px;
+    max-width: 480px;
+    width: 100%;
+    padding: 36px;
+    box-shadow: 0 24px 80px rgba(28,25,21,0.3);
+    transform: translateY(20px);
+    transition: var(--transition);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-overlay.visible .modal { transform: translateY(0); }
+
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 32px; height: 32px;
+    border: none; background: none;
+    cursor: pointer;
+    color: var(--stone-light);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: var(--transition);
+  }
+
+  .modal-close:hover { background: var(--cream); }
+
+  .modal-gem {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+    margin: 0 auto 20px;
+  }
+
+  .modal h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 300;
+    text-align: center;
+    color: var(--stone-dark);
+    margin-bottom: 6px;
+  }
+
+  .modal p.modal-sub {
+    text-align: center;
+    font-size: 13px;
+    color: var(--stone-light);
+    margin-bottom: 24px;
+  }
+
+  .form-group { margin-bottom: 14px; }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--stone-mid);
+    margin-bottom: 5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--stone-dark);
+    background: var(--cream);
+    transition: var(--transition);
+    outline: none;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196,163,90,0.15); }
+
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  .modal-submit {
+    width: 100%;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    color: var(--stone-dark);
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 6px;
+  }
+
+  .modal-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(196,163,90,0.4); }
+
+  .modal-disclaimer { text-align: center; font-size: 11px; color: var(--stone-light); margin-top: 10px; }
+
+  /* SUCCESS */
+  .success-state { text-align: center; display: none; }
+  .success-icon  { font-size: 48px; margin-bottom: 12px; }
+
+  .success-state h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+
+  .success-state p { font-size: 14px; color: var(--stone-light); line-height: 1.6; }
+
+  /* FOOTER */
+  footer {
+    background: var(--stone-dark);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid rgba(196,163,90,0.2);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  footer span { font-size: 12px; color: var(--stone-light); }
+  footer a { color: var(--gold); font-size: 12px; text-decoration: none; }
+  footer a:hover { color: var(--gold-light); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--stone-dark);
+    color: var(--gold-light);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 2000;
+    opacity: 0;
+    transition: all 0.35s ease;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .app-body { grid-template-columns: 1fr; }
+    .materials-panel { border-left: none; border-top: 1px solid var(--border); }
+    .canvas-panel { padding: 16px; }
+    .hero-strip { padding: 14px 16px; }
+    header { padding: 0 16px; }
+    .step span:not(.step-num) { display: none; }
+    footer { flex-direction: column; text-align: center; }
+    .cta-sub { flex-direction: column; }
+    .modal { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     HEADER
+     ========================================================= -->
+<header>
+  <div class="logo">
+    <div class="logo-gem"></div>
+    StoneCraft Visualizer
+  </div>
+  <button class="header-cta" onclick="openModal()">📋 Solicitar Cotización</button>
+</header>
+
+<!-- =========================================================
+     HERO
+     ========================================================= -->
+<div class="hero-strip">
+  <h1>Visualiza tu superficie ideal antes de decidir</h1>
+  <p>Sube una foto de tu cocina o baño y explora nuestros materiales premium en tiempo real</p>
+</div>
+
+<!-- =========================================================
+     STEPS
+     ========================================================= -->
+<div class="steps-bar">
+  <div class="step active" id="step1">
+    <div class="step-num">1</div>
+    <span>Sube tu foto</span>
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step" id="step2">
+    <div class="step-num">2</div>
+    <span>Selecciona área</span>
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step" id="step3">
+    <div class="step-num">3</div>
+    <span>Elige material</span>
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step" id="step4">
+    <div class="step-num">4</div>
+    <span>Solicita cotización</span>
+  </div>
+</div>
+
+<!-- =========================================================
+     MAIN BODY
+     ========================================================= -->
+<div class="app-body">
+
+  <!-- LEFT: CANVAS -->
+  <div class="canvas-panel">
+
+    <!-- Upload Zone -->
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📷</div>
+      <h3>Sube una foto de tu espacio</h3>
+      <p>Formatos: JPG, PNG, WEBP — Máx 10 MB</p>
+      <button class="upload-btn" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+        Seleccionar imagen
+      </button>
+      <p style="font-size:11px; color:var(--stone-light); margin-top:8px;">O arrastra y suelta aquí</p>
+      <input type="file" id="fileInput" accept="image/*" onchange="loadImage(event)">
+    </div>
+
+    <!-- Canvas Container -->
+    <div class="canvas-container" id="canvasContainer">
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div class="canvas-tools">
+          <span class="tool-label">Herramientas:</span>
+          <button class="tool-btn active" id="drawTool" onclick="setTool('draw')">✏️ Trazar área</button>
+          <button class="tool-btn danger" onclick="clearSelection()">🗑 Limpiar</button>
+          <button class="tool-btn" onclick="document.getElementById('fileInput').click()">🔄 Cambiar foto</button>
+        </div>
+        <div class="compare-tabs">
+          <button class="compare-tab active" onclick="setView('preview')">Vista previa</button>
+          <button class="compare-tab" onclick="setView('original')">Original</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <canvas id="mainCanvas"></canvas>
+      </div>
+
+      <div class="canvas-hint" id="canvasHint">
+        💡 Haz clic en los vértices de tu superficie para trazar el área. Doble clic para cerrar la selección.
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: MATERIALS -->
+  <div class="materials-panel">
+
+    <div class="panel-header">
+      <h2>Materiales Premium</h2>
+      <p>Selecciona un material para aplicarlo</p>
+    </div>
+
+    <div class="material-categories" id="categoryTabs">
+      <button class="cat-btn active" onclick="filterCategory('Todos',this)">Todos</button>
+      <button class="cat-btn" onclick="filterCategory('Mármol',this)">Mármol</button>
+      <button class="cat-btn" onclick="filterCategory('Granito',this)">Granito</button>
+      <button class="cat-btn" onclick="filterCategory('Cuarzo',this)">Cuarzo</button>
+      <button class="cat-btn" onclick="filterCategory('Porcelana',this)">Porcelana</button>
+      <button class="cat-btn" onclick="filterCategory('Madera',this)">Madera</button>
+    </div>
+
+    <div class="material-grid" id="materialGrid"></div>
+
+    <div class="selected-material-detail" id="selectedDetail">
+      <div class="smd-title">Material seleccionado</div>
+      <div class="smd-name" id="detailName">—</div>
+      <div class="smd-desc" id="detailDesc">—</div>
+    </div>
+
+    <div class="opacity-control" id="opacityControl" style="display:none;">
+      <label>
+        <span>Intensidad de textura</span>
+        <span id="opacityVal">75%</span>
+      </label>
+      <input type="range" min="20" max="100" value="75" id="opacitySlider" oninput="updateOpacity(this.value)">
+    </div>
+
+    <div class="cta-block">
+      <p>¿Te gustó algún material? Solicita una cotización gratuita sin compromiso</p>
+      <button class="cta-main" onclick="openModal()">
+        💎 Solicitar Cotización Gratis
+      </button>
+      <div class="cta-sub">
+        <button class="cta-sub-btn" onclick="shareDesign()">📤 Compartir</button>
+        <button class="cta-sub-btn" onclick="downloadPreview()">⬇️ Descargar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+<footer>
+  <span>© 2025 StoneCraft — Superficies de lujo para tu hogar</span>
+  <div style="display:flex; gap:20px;">
+    <a href="#">Privacidad</a>
+    <a href="#">WhatsApp</a>
+    <a href="#">Instagram</a>
+  </div>
+</footer>
+
+<!-- =========================================================
+     MODAL — COTIZACIÓN
+     ========================================================= -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+
+    <div id="formState">
+      <div class="modal-gem"></div>
+      <h2>Solicitar Cotización</h2>
+      <p class="modal-sub">Te contactamos en menos de 24 horas con precio exacto</p>
+
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="fName" placeholder="María González" />
+      </div>
+      <div class="form-group">
+        <label>Teléfono / WhatsApp</label>
+        <input type="tel" id="fPhone" placeholder="+1 (555) 000-0000" />
+      </div>
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="fEmail" placeholder="maria@correo.com" />
+      </div>
+      <div class="form-group">
+        <label>Tipo de proyecto</label>
+        <select id="fProject">
+          <option value="">— Selecciona —</option>
+          <option>Encimera de cocina</option>
+          <option>Vanity de baño</option>
+          <option>Isla de cocina</option>
+          <option>Múltiples áreas</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Comentarios adicionales</label>
+        <textarea id="fNotes" placeholder="Cuéntanos el tamaño aproximado, colores, fechas, etc."></textarea>
+      </div>
+
+      <button class="modal-submit" onclick="submitQuote()">Enviar Solicitud ✦</button>
+      <p class="modal-disclaimer">🔒 Tu información es privada y nunca se comparte con terceros</p>
+    </div>
+
+    <div class="success-state" id="successState">
+      <div class="success-icon">✅</div>
+      <h3>¡Solicitud enviada!</h3>
+      <p>Gracias por contactarnos. Un asesor te llamará o escribirá por WhatsApp en las próximas 24 horas con tu cotización personalizada.</p>
+      <button class="modal-submit" onclick="closeModal()" style="margin-top:20px;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- =========================================================
+     JAVASCRIPT
+     ========================================================= -->
+<script>
+/* =========================================================
+   DATASET DE MATERIALES
+   NOTA: Reemplaza los colores por URLs de fotos reales
+   de tus materiales en un CDN (Cloudinary, S3, etc.)
+   ========================================================= */
+const MATERIALS = [
+  {
+    id:1,  name:'Mármol Carrara Blanco',  category:'Mármol',
+    desc:'Elegancia clásica italiana. Venas grises sutiles sobre fondo blanco perla.',
+    price:'$$$',
+    color:'linear-gradient(135deg,#f0ece6 0%,#e8e4de 30%,#d8d4ce 60%,#ece8e2 100%)',
+    fill:'#e8e4de'
+  },
+  {
+    id:2,  name:'Mármol Negro Marquina',  category:'Mármol',
+    desc:'Dramatismo absoluto. Negro profundo con venas doradas naturales.',
+    price:'$$$',
+    color:'linear-gradient(135deg,#1a1a1a 0%,#2a2a2a 40%,#1e1e1e 70%,#252525 100%)',
+    fill:'#1e1e1e'
+  },
+  {
+    id:3,  name:'Granito Azul Bahía',  category:'Granito',
+    desc:'Tonos azul-gris con destellos plateados únicos en cada losa.',
+    price:'$$',
+    color:'linear-gradient(135deg,#3a4a5a 0%,#4a5a6a 30%,#2a3a4a 60%,#3a4a5a 100%)',
+    fill:'#3a4a5a'
+  },
+  {
+    id:4,  name:'Granito Absoluto Negro',  category:'Granito',
+    desc:'Superficie oscura uniforme, ideal para cocinas modernas minimalistas.',
+    price:'$$',
+    color:'linear-gradient(135deg,#1a1a1a 0%,#252525 50%,#1a1a1a 100%)',
+    fill:'#1a1a1a'
+  },
+  {
+    id:5,  name:'Cuarzo Blanco Nieve',  category:'Cuarzo',
+    desc:'No poroso, resistente a manchas. Blanco puro con acabado sedoso.',
+    price:'$$',
+    color:'linear-gradient(135deg,#f8f7f5 0%,#f0eeea 50%,#f8f7f5 100%)',
+    fill:'#f2f0ec'
+  },
+  {
+    id:6,  name:'Cuarzo Greige Cemento',  category:'Cuarzo',
+    desc:'Tono gris-beige neutro. Combina con cualquier paleta de diseño interior.',
+    price:'$$',
+    color:'linear-gradient(135deg,#c8bfb2 0%,#b8afa2 40%,#c2b9ac 100%)',
+    fill:'#c2b9ac'
+  },
+  {
+    id:7,  name:'Porcelana Ultra Slim',  category:'Porcelana',
+    desc:'Solo 12mm de grosor. Resistente a rayones, calor y UV.',
+    price:'$$$',
+    color:'linear-gradient(135deg,#e8e4e0 0%,#ddd9d5 50%,#e4e0dc 100%)',
+    fill:'#e2deda'
+  },
+  {
+    id:8,  name:'Porcelana Cemento Industrial',  category:'Porcelana',
+    desc:'Estética urbana con acabado mate cemento, muy popular en diseño contemporáneo.',
+    price:'$$$',
+    color:'linear-gradient(135deg,#888884 0%,#7a7a76 40%,#848480 100%)',
+    fill:'#828280'
+  },
+  {
+    id:9,  name:'Madera Nogal Natural',  category:'Madera',
+    desc:'Calidez orgánica auténtica. Madera sólida tratada para uso en cocina.',
+    price:'$$$',
+    color:'linear-gradient(135deg,#6b4423 0%,#7a5030 30%,#5e3a1e 70%,#6b4423 100%)',
+    fill:'#7a5030'
+  },
+  {
+    id:10, name:'Madera Roble Blanqueado', category:'Madera',
+    desc:'Roble de grano abierto con tratamiento blanqueado. Estilo escandinavo moderno.',
+    price:'$$',
+    color:'linear-gradient(135deg,#d4c4a8 0%,#c8b898 30%,#d0c0a4 70%,#c4b494 100%)',
+    fill:'#d0c0a4'
+  },
+  {
+    id:11, name:'Mármol Rosa Portugués', category:'Mármol',
+    desc:'Rosa blush suave con venas finas. Perfecto para vanities y baños de lujo.',
+    price:'$$$',
+    color:'linear-gradient(135deg,#f0d8d0 0%,#e4ccc4 40%,#ecd4cc 100%)',
+    fill:'#ecd4cc'
+  },
+  {
+    id:12, name:'Cuarzo Calacatta Gold', category:'Cuarzo',
+    desc:'Imitación Calacatta con venas doradas. Lujo accesible y sin mantenimiento.',
+    price:'$$$',
+    color:'linear-gradient(135deg,#f4f0e8 0%,#ece8de 40%,#f0ece4 100%)',
+    fill:'#f0ece4'
+  }
+];
+
+/* =========================================================
+   ESTADO GLOBAL
+   ========================================================= */
+var state = {
+  imageLoaded:     false,
+  originalImage:   null,
+  points:          [],
+  selectionClosed: false,
+  selectedMaterial:null,
+  overlayOpacity:  0.75,
+  currentView:     'preview'
+};
+
+/* =========================================================
+   RENDER MATERIALES
+   ========================================================= */
+function renderMaterials(filter) {
+  filter = filter || 'Todos';
+  var grid     = document.getElementById('materialGrid');
+  var filtered = filter === 'Todos' ? MATERIALS : MATERIALS.filter(function(m){ return m.category === filter; });
+
+  grid.innerHTML = filtered.map(function(m){
+    return '<div class="material-card" id="mat-'+m.id+'" onclick="selectMaterial('+m.id+')">' +
+      '<div class="material-swatch" style="background:'+m.color+';"></div>' +
+      '<div class="material-info">' +
+        '<div class="material-name">'+m.name+'</div>' +
+        '<div class="material-meta"><span>'+m.category+'</span><span class="material-price">'+m.price+'</span></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  /* Restaurar selección activa si corresponde */
+  if(state.selectedMaterial){
+    var card = document.getElementById('mat-'+state.selectedMaterial.id);
+    if(card) card.classList.add('selected');
+  }
+}
+
+function filterCategory(cat, btn){
+  document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderMaterials(cat);
+}
+
+/* =========================================================
+   SELECCIÓN DE MATERIAL
+   ========================================================= */
+function selectMaterial(id){
+  var mat = MATERIALS.find(function(m){ return m.id === id; });
+  if(!mat) return;
+
+  state.selectedMaterial = mat;
+  document.querySelectorAll('.material-card').forEach(function(c){ c.classList.remove('selected'); });
+  var card = document.getElementById('mat-'+id);
+  if(card) card.classList.add('selected');
+
+  document.getElementById('detailName').textContent = mat.name;
+  document.getElementById('detailDesc').textContent  = mat.desc;
+  document.getElementById('selectedDetail').classList.add('visible');
+  document.getElementById('opacityControl').style.display = 'block';
+
+  if(state.imageLoaded){
+    redrawCanvas();
+    if(!state.selectionClosed){
+      showToast('💡 Traza el área de tu superficie primero');
+    } else {
+      showToast('✓ Material aplicado: ' + mat.name);
+      updateStep(3);
+    }
+  } else {
+    showToast('📷 Primero sube una foto de tu espacio');
+  }
+}
+
+/* =========================================================
+   CARGA DE IMAGEN
+   ========================================================= */
+function loadImage(event){
+  var file = event.target.files[0];
+  if(!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      state.originalImage   = img;
+      state.imageLoaded     = true;
+      state.points          = [];
+      state.selectionClosed = false;
+
+      document.getElementById('uploadZone').style.display    = 'none';
+      document.getElementById('canvasContainer').classList.add('visible');
+
+      setupCanvas(img);
+      updateStep(2);
+      showToast('✓ Foto cargada — Traza el área de tu superficie');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* =========================================================
+   SETUP CANVAS
+   ========================================================= */
+function setupCanvas(img){
+  var canvas  = document.getElementById('mainCanvas');
+  var wrapper = document.getElementById('canvasWrapper');
+  var maxW    = wrapper.parentElement.offsetWidth - 60;
+  var maxH    = 520;
+
+  var w = img.naturalWidth;
+  var h = img.naturalHeight;
+
+  if(w > maxW){ h = h * maxW / w; w = maxW; }
+  if(h > maxH){ w = w * maxH / h; h = maxH; }
+
+  canvas.width  = Math.round(w);
+  canvas.height = Math.round(h);
+
+  redrawCanvas();
+
+  canvas.onclick     = handleCanvasClick;
+  canvas.ondblclick  = handleDoubleClick;
+}
+
+/* =========================================================
+   DIBUJO EN CANVAS
+   ========================================================= */
+function redrawCanvas(){
+  var canvas = document.getElementById('mainCanvas');
+  var ctx    = canvas.getContext('2d');
+  var img    = state.originalImage;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  if(state.points.length === 0) return;
+
+  /* Overlay de material */
+  if(state.selectionClosed && state.selectedMaterial && state.currentView === 'preview'){
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(state.points[0].x, state.points[0].y);
+    for(var i=1; i<state.points.length; i++) ctx.lineTo(state.points[i].x, state.points[i].y);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.globalAlpha = state.overlayOpacity;
+    ctx.fillStyle   = state.selectedMaterial.fill;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /* Contorno del polígono */
+  if(state.points.length > 1){
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(state.points[0].x, state.points[0].y);
+    for(var j=1; j<state.points.length; j++) ctx.lineTo(state.points[j].x, state.points[j].y);
+    if(state.selectionClosed) ctx.closePath();
+
+    ctx.strokeStyle = 'rgba(196,163,90,0.9)';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash(state.selectionClosed ? [] : [6,4]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* Puntos del polígono (sólo mientras se dibuja) */
+  if(!state.selectionClosed){
+    for(var k=0; k<state.points.length; k++){
+      var p = state.points[k];
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
+      ctx.fillStyle   = k === 0 ? '#C4A35A' : 'white';
+      ctx.fill();
+      ctx.strokeStyle = '#C4A35A';
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+/* =========================================================
+   EVENTOS DE CANVAS
+   ========================================================= */
+function handleCanvasClick(e){
+  if(state.selectionClosed) return;
+
+  var rect  = e.target.getBoundingClientRect();
+  var scaleX = e.target.width  / rect.width;
+  var scaleY = e.target.height / rect.height;
+  var x = (e.clientX - rect.left)  * scaleX;
+  var y = (e.clientY - rect.top)   * scaleY;
+
+  /* Cerrar si clic cerca del primer punto */
+  if(state.points.length > 2){
+    var first = state.points[0];
+    var dist  = Math.sqrt(Math.pow(x-first.x,2) + Math.pow(y-first.y,2));
+    if(dist < 20){ closePolygon(); return; }
+  }
+
+  state.points.push({x:x, y:y});
+  redrawCanvas();
+
+  if(state.points.length === 1){
+    document.getElementById('canvasHint').textContent = '💡 Continúa trazando. Doble clic o haz clic en el punto inicial para cerrar.';
+  }
+}
+
+function handleDoubleClick(e){
+  if(state.points.length > 2 && !state.selectionClosed) closePolygon();
+}
+
+function closePolygon(){
+  state.selectionClosed = true;
+  redrawCanvas();
+  document.getElementById('canvasHint').textContent = '✓ Área seleccionada — Elige un material en el panel derecho';
+  if(state.selectedMaterial){ redrawCanvas(); updateStep(3); }
+  showToast('✓ Área cerrada — Ahora elige un material');
+}
+
+function clearSelection(){
+  state.points          = [];
+  state.selectionClosed = false;
+  if(state.imageLoaded){
+    redrawCanvas();
+    document.getElementById('canvasHint').textContent = '💡 Haz clic en los vértices de tu superficie para trazar el área. Doble clic para cerrar.';
+    showToast('Selección limpiada');
+  }
+}
+
+function setTool(t){
+  document.getElementById('drawTool').classList.toggle('active', t === 'draw');
+}
+
+/* =========================================================
+   TOGGLE ORIGINAL / PREVIEW
+   ========================================================= */
+function setView(view){
+  state.currentView = view;
+  document.querySelectorAll('.compare-tab').forEach(function(btn, i){
+    btn.classList.toggle('active', (i===0 && view==='preview') || (i===1 && view==='original'));
+  });
+  if(state.imageLoaded) redrawCanvas();
+}
+
+/* =========================================================
+   SLIDER DE OPACIDAD
+   ========================================================= */
+function updateOpacity(val){
+  state.overlayOpacity = val / 100;
+  document.getElementById('opacityVal').textContent = val + '%';
+  if(state.imageLoaded) redrawCanvas();
+}
+
+/* =========================================================
+   PASOS
+   ========================================================= */
+function updateStep(activeStep){
+  for(var i=1; i<=4; i++){
+    var el = document.getElementById('step'+i);
+    el.classList.remove('active','done');
+    if(i < activeStep)       el.classList.add('done');
+    else if(i === activeStep) el.classList.add('active');
+  }
+}
+
+/* =========================================================
+   COMPARTIR / DESCARGAR
+   ========================================================= */
+function shareDesign(){
+  showToast('📤 Función de compartir disponible próximamente');
+}
+
+function downloadPreview(){
+  if(!state.imageLoaded){ showToast('📷 Primero carga una foto'); return; }
+  var canvas = document.getElementById('mainCanvas');
+  var link   = document.createElement('a');
+  link.download = 'stonecraft-preview.png';
+  link.href     = canvas.toDataURL('image/png');
+  link.click();
+  showToast('⬇️ Vista previa descargada');
+}
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+function openModal(){
+  document.getElementById('modalOverlay').classList.add('visible');
+  document.getElementById('formState').style.display    = 'block';
+  document.getElementById('successState').style.display = 'none';
+  updateStep(4);
+  if(state.selectedMaterial){
+    var notes = document.getElementById('fNotes');
+    if(!notes.value) notes.value = 'Material de interés: ' + state.selectedMaterial.name;
+  }
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('visible');
+}
+
+function closeModalOutside(e){
+  if(e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function submitQuote(){
+  var name  = document.getElementById('fName').value.trim();
+  var phone = document.getElementById('fPhone').value.trim();
+
+  if(!name || !phone){
+    showToast('⚠️ Ingresa tu nombre y teléfono');
+    return;
+  }
+
+  /*
+    =========================================================
+    INTEGRACIÓN GHL — WEBHOOK
+    Descomenta y reemplaza la URL con tu webhook de GHL:
+
+    fetch('https://services.leadconnectorhq.com/hooks/TU-WEBHOOK-ID', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre:    name,
+        telefono:  phone,
+        email:     document.getElementById('fEmail').value,
+        material:  state.selectedMaterial ? state.selectedMaterial.name : 'No seleccionado',
+        proyecto:  document.getElementById('fProject').value,
+        notas:     document.getElementById('fNotes').value
+      })
+    });
+    =========================================================
+  */
+
+  document.getElementById('formState').style.display    = 'none';
+  document.getElementById('successState').style.display = 'block';
+  showToast('✅ ¡Solicitud enviada con éxito!');
+}
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+var toastTimer = null;
+function showToast(msg){
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 3000);
+}
+
+/* =========================================================
+   DRAG & DROP
+   ========================================================= */
+var uploadZone = document.getElementById('uploadZone');
+
+uploadZone.addEventListener('dragover', function(e){
+  e.preventDefault();
+  uploadZone.style.borderColor = 'var(--gold-dark)';
+  uploadZone.style.background  = 'rgba(196,163,90,0.06)';
+});
+
+uploadZone.addEventListener('dragleave', function(){
+  uploadZone.style.borderColor = 'var(--gold)';
+  uploadZone.style.background  = 'var(--warm-white)';
+});
+
+uploadZone.addEventListener('drop', function(e){
+  e.preventDefault();
+  uploadZone.style.borderColor = 'var(--gold)';
+  var file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')){
+    var input = document.getElementById('fileInput');
+    var dt    = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    loadImage({ target: input });
+  }
+});
+
+/* =========================================================
+   INIT
+   ========================================================= */
+renderMaterials();
+</script>
+
+</body>
+</html>
