@@ -16,7 +16,6 @@ export default async function handler(req, res) {
     const toilet = selectedProducts.find(p => p.type === "toilet");
     const floor  = selectedProducts.find(p => p.type === "floor");
 
-    // Descripciones técnicas de cada producto para el prompt
     const replacements = [];
     if (toilet) replacements.push(`TOILET: Replace the existing toilet with "${toilet.name}" — ${toilet.description || "modern white ceramic toilet, clean design, standard height"}`);
     if (sink)   replacements.push(`SINK: Replace the existing sink/vanity with "${sink.name}" — ${sink.description || "modern white ceramic sink, clean lines"}`);
@@ -51,11 +50,10 @@ Generate the modified bathroom image now.`;
       ? baseImageDataUrl.split(",")[1]
       : baseImageDataUrl;
 
-    // Detectar tipo de imagen
     const mimeMatch = baseImageDataUrl.match(/data:(image\/\w+);base64/);
     const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
 
-    // Llamada a Responses API (mejor seguimiento de instrucciones que images/edits)
+    // Responses API — formato correcto para imagen base64
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -69,15 +67,13 @@ Generate the modified bathroom image now.`;
             role: "user",
             content: [
               {
-                type: "input_image",
-                source: {
-                  type: "base64",
-                  media_type: mimeType,
-                  data: base64Data
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Data}`
                 }
               },
               {
-                type: "input_text",
+                type: "text",
                 text: prompt
               }
             ]
@@ -97,18 +93,15 @@ Generate the modified bathroom image now.`;
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenAI Responses API error:", JSON.stringify(data));
+      console.error("OpenAI error:", JSON.stringify(data));
       return res.status(response.status).json({
         error: data?.error?.message || "OpenAI error",
         raw: data
       });
     }
 
-    // Extraer imagen del output de la Responses API
-    const imageBlock = data?.output?.find(
-      item => item.type === "image_generation_call"
-    );
-
+    // Extraer imagen generada del output
+    const imageBlock = data?.output?.find(item => item.type === "image_generation_call");
     const imageBase64 = imageBlock?.result;
 
     if (!imageBase64) {
