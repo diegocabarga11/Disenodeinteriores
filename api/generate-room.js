@@ -62,7 +62,7 @@ After replacement:
         prompt: prompt,
         n: 1,
         size: "1024x1024",
-        images: [base64Image]
+        images: [{ type: "base64", media_type: "image/png", data: base64Image }]
       })
     });
 
