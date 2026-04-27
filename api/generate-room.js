@@ -45,25 +45,43 @@ After replacement:
 - The final result must look like a real photograph taken in this exact room after installation.
 - Do NOT make it look like a 3D render or catalog photo.`;
 
-    // Extraer solo el base64 puro (sin el prefijo data:image/...;base64,)
-    const base64Image = baseImageDataUrl.includes(",")
+    // Convertir base64 a Buffer
+    const base64Data = baseImageDataUrl.includes(",")
       ? baseImageDataUrl.split(",")[1]
       : baseImageDataUrl;
+    const imageBuffer = Buffer.from(base64Data, "base64");
 
-    // Llamada a OpenAI images/edits con imagen en base64
+    // Construir multipart/form-data manualmente (sin dependencias externas)
+    const boundary = "----FormBoundary" + Math.random().toString(36).slice(2);
+
+    const textField = (name, value) =>
+      `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
+
+    const fileField = (name, filename, contentType, buffer) => {
+      const header = `--${boundary}\r\nContent-Disposition: form-data; name="${name}"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`;
+      return Buffer.concat([Buffer.from(header), buffer, Buffer.from("\r\n")]);
+    };
+
+    const parts = [
+      Buffer.from(textField("model", "gpt-image-1")),
+      Buffer.from(textField("prompt", prompt)),
+      Buffer.from(textField("n", "1")),
+      Buffer.from(textField("size", "1024x1024")),
+      fileField("image", "room.png", "image/png", imageBuffer),
+      Buffer.from(`--${boundary}--\r\n`),
+    ];
+
+    const body = Buffer.concat(parts);
+
+    // Llamada a OpenAI images/edits
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        "Content-Length": body.length.toString(),
       },
-      body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024",
-        images: [{ type: "base64", media_type: "image/png", data: base64Image }]
-      })
+      body: body,
     });
 
     const data = await response.json();
