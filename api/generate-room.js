@@ -4,98 +4,115 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
     const { baseImageDataUrl, selectedProducts } = req.body;
 
-    if (!baseImageDataUrl) {
-      return res.status(400).json({ error: "No base image provided" });
-    }
-    if (!selectedProducts || selectedProducts.length === 0) {
-      return res.status(400).json({ error: "No products selected" });
-    }
+    if (!baseImageDataUrl) return res.status(400).json({ error: "No base image provided" });
+    if (!selectedProducts || selectedProducts.length === 0) return res.status(400).json({ error: "No products selected" });
 
-    // Extraer productos seleccionados
     const sink   = selectedProducts.find(p => p.type === "sink");
     const toilet = selectedProducts.find(p => p.type === "toilet");
     const floor  = selectedProducts.find(p => p.type === "floor");
 
-    // Construir lista de reemplazos
+    // Descripciones técnicas de cada producto para el prompt
     const replacements = [];
-    if (toilet) replacements.push(`- Replace the existing toilet with: ${toilet.description || toilet.name + ", modern white ceramic toilet, clean design"}`);
-    if (sink)   replacements.push(`- Replace the existing sink with: ${sink.description || sink.name + ", modern white ceramic sink, clean design"}`);
-    if (floor)  replacements.push(`- Replace the existing floor with: ${floor.description || floor.name + ", modern floor tiles"}`);
+    if (toilet) replacements.push(`TOILET: Replace the existing toilet with "${toilet.name}" — ${toilet.description || "modern white ceramic toilet, clean design, standard height"}`);
+    if (sink)   replacements.push(`SINK: Replace the existing sink/vanity with "${sink.name}" — ${sink.description || "modern white ceramic sink, clean lines"}`);
+    if (floor)  replacements.push(`FLOOR: Replace ALL floor tiles completely with "${floor.name}" — ${floor.description || "modern floor tiles, uniform pattern covering the entire floor area"}`);
 
-    const prompt = `You are a photorealistic interior visualization tool.
+    const prompt = `You are an expert photorealistic bathroom renovation visualizer.
 
-STRICT RULES - follow exactly:
-1. Keep the ENTIRE room structure identical: walls, ceiling, windows, doors, lighting, camera angle, perspective.
-2. Keep all personal items, towels, and decorations exactly as they appear.
-3. Do NOT redecorate. Do NOT redesign. Do NOT add elements that are not there.
-4. ONLY make these specific replacements:
+I am going to show you a real bathroom photo. Your task is to generate a new version of this EXACT bathroom with specific product replacements.
+
+MANDATORY RULES:
+1. Keep 100% of the room structure: walls, ceiling, shower, doors, windows, mirrors, lighting fixtures, camera angle and perspective — ALL unchanged.
+2. Keep all colors, textures and finishes of everything NOT listed below — unchanged.
+3. Make ONLY these replacements:
+
 ${replacements.join("\n")}
 
-After replacement:
-- New elements must match the room's perspective, scale, and lighting naturally.
-- Shadows and reflections must look physically correct.
-- The final result must look like a real photograph taken in this exact room after installation.
-- Do NOT make it look like a 3D render or catalog photo.`;
+CRITICAL FOR FLOOR REPLACEMENT:
+- The floor replacement is MANDATORY. You MUST change every visible floor tile in the image.
+- The new floor must cover the complete floor surface, including corners and edges.
+- Match the perspective and light reflections of the original photo.
+- Do not leave any original floor tiles visible.
 
-    // Convertir base64 a Buffer
+QUALITY REQUIREMENTS:
+- The result must look like a real photograph, NOT a render or illustration.
+- Lighting, shadows and reflections must be physically coherent with the original photo.
+- The new products must look naturally installed, not pasted on.
+
+Generate the modified bathroom image now.`;
+
+    // Extraer base64 puro
     const base64Data = baseImageDataUrl.includes(",")
       ? baseImageDataUrl.split(",")[1]
       : baseImageDataUrl;
-    const imageBuffer = Buffer.from(base64Data, "base64");
 
-    // Construir multipart/form-data manualmente (sin dependencias externas)
-    const boundary = "----FormBoundary" + Math.random().toString(36).slice(2);
+    // Detectar tipo de imagen
+    const mimeMatch = baseImageDataUrl.match(/data:(image\/\w+);base64/);
+    const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
 
-    const textField = (name, value) =>
-      `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
-
-    const fileField = (name, filename, contentType, buffer) => {
-      const header = `--${boundary}\r\nContent-Disposition: form-data; name="${name}"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`;
-      return Buffer.concat([Buffer.from(header), buffer, Buffer.from("\r\n")]);
-    };
-
-    const parts = [
-      Buffer.from(textField("model", "gpt-image-1")),
-      Buffer.from(textField("prompt", prompt)),
-      Buffer.from(textField("n", "1")),
-      Buffer.from(textField("size", "1024x1024")),
-      fileField("image", "room.png", "image/png", imageBuffer),
-      Buffer.from(`--${boundary}--\r\n`),
-    ];
-
-    const body = Buffer.concat(parts);
-
-    // Llamada a OpenAI images/edits
-    const response = await fetch("https://api.openai.com/v1/images/edits", {
+    // Llamada a Responses API (mejor seguimiento de instrucciones que images/edits)
+    const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Content-Length": body.length.toString(),
+        "Content-Type": "application/json"
       },
-      body: body,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_image",
+                source: {
+                  type: "base64",
+                  media_type: mimeType,
+                  data: base64Data
+                }
+              },
+              {
+                type: "input_text",
+                text: prompt
+              }
+            ]
+          }
+        ],
+        tools: [
+          {
+            type: "image_generation",
+            quality: "medium",
+            size: "1024x1024",
+            output_format: "png"
+          }
+        ]
+      })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenAI error:", JSON.stringify(data));
+      console.error("OpenAI Responses API error:", JSON.stringify(data));
       return res.status(response.status).json({
         error: data?.error?.message || "OpenAI error",
         raw: data
       });
     }
 
-    const imageBase64 = data?.data?.[0]?.b64_json;
+    // Extraer imagen del output de la Responses API
+    const imageBlock = data?.output?.find(
+      item => item.type === "image_generation_call"
+    );
+
+    const imageBase64 = imageBlock?.result;
+
     if (!imageBase64) {
+      console.error("No image in response:", JSON.stringify(data));
       return res.status(500).json({
         error: "No image returned from OpenAI",
         raw: data
