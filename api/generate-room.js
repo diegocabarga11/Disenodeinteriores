@@ -53,7 +53,7 @@ Generate the modified bathroom image now.`;
     const mimeMatch = baseImageDataUrl.match(/data:(image\/\w+);base64/);
     const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
 
-    // Responses API — formato correcto para imagen base64
+    // Responses API — formato correcto: input_image con url como data URL
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -67,13 +67,11 @@ Generate the modified bathroom image now.`;
             role: "user",
             content: [
               {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Data}`
-                }
+                type: "input_image",
+                image_url: `data:${mimeType};base64,${base64Data}`
               },
               {
-                type: "text",
+                type: "input_text",
                 text: prompt
               }
             ]
@@ -105,7 +103,7 @@ Generate the modified bathroom image now.`;
     const imageBase64 = imageBlock?.result;
 
     if (!imageBase64) {
-      console.error("No image in response:", JSON.stringify(data));
+      console.error("No image in response:", JSON.stringify(data?.output));
       return res.status(500).json({
         error: "No image returned from OpenAI",
         raw: data
